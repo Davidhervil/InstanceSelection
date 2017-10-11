@@ -8,24 +8,29 @@ from sklearn import metrics
 from random import randint
 
 training = np.array(1)
-tests 	  = []
+tests = []
 
 def initTrainSet(classifier, matrix):
+	global training
 	Xs, Ds = obtainXFx(matrix)
 	maxAcc = 0
 	bestX_train = bestD_train = np.array(1)
 	for i in range(10):
 		X_train, X_test, d_train, d_test = split(Xs,Ds,0.2)
-		acc = objectiveFunction(classifier,X_train,d_train,X_test,d_test)
+		acc = objectiveFunction1(classifier,X_train,d_train,X_test,d_test)
 		if(maxAcc<=acc):
 			maxAcc = acc
 			bestX_train = X_train
 			bestD_train = d_train
-	training = np.append(bestX_train, bestD_train, axis=1)
+	#print(bestX_train.ndim, bestD_train.ndim)
+	bestX_train.astype('str')
+	bestD_train.astype('str')
+	training = np.append(bestX_train,bestD_train[...,None] ,1)
 
 def initTestSet(matrix, k=10):
+	global tests
 	filas = matrix.shape[0]
-	quantity = filas / k
+	quantity = int(filas / k)
 	for i in range(0, filas, quantity):
 		if(i+quantity < filas):
 			m = matrix[i:(i+quantity),:]
@@ -34,7 +39,7 @@ def initTestSet(matrix, k=10):
 		tests.append(m)
 
 class Solution:
-	def __init__(self, p = {}, acc = 0):
+	def __init__(self, p = set(), acc = 0):
 		self.positions = p   	# Lista de enteros
 		self.accuracy  = acc	# Float
 
@@ -61,7 +66,7 @@ def obtainXFx(matrix):
 	imp = preprocessing.Imputer(missing_values ='NaN')
 	X = np.array(matrix[:,:matrix.shape[1]-1],dtype='float64')
 	X = imp.fit_transform(X)
-	d = matrix[:,matrix.shape[1]-1]
+	d = matrix[0:matrix.shape[0],matrix.shape[1]-1]
 	return X, d
 
 def split(X,d,validate_size,random_stat=randint(11,100)):
@@ -71,7 +76,7 @@ def split(X,d,validate_size,random_stat=randint(11,100)):
 							test_size=validate_size,
 							random_state=None)
 
-def objectiveFunction(classifier, trainingData, trainingRespones, testData,
+def objectiveFunction1(classifier, trainingData, trainingRespones, testData,
 					  testResponses):
 	classifier.fit(trainingData,trainingRespones)
 	y_pred = classifier.predict(testData)
@@ -80,7 +85,7 @@ def objectiveFunction(classifier, trainingData, trainingRespones, testData,
 def objectiveFunction(classifier, trainingData, testData):
 	# Funcion que recibe un clasificador, una matriz de entrenamiento y
 	# n matrices de prueba y retorna el valor promedio de la precision.
-	td, tr = obtainXFx(trainingData)
+	x_train, d_train = obtainXFx(trainingData)
 	classifier.fit(x_train, d_train)
 	acum = 0
 	for test in testData:
@@ -90,6 +95,8 @@ def objectiveFunction(classifier, trainingData, testData):
 	return float(acum/len(testData))
 
 def firstBetter(s, Ns, classifier, maxTries=100):
+	global training
+	global tests
 	for n in Ns:
 		n.accuracy = objectiveFunction(classifier, n.createSubmatrix(training), tests)
 		if(s.accuracy <= n.accuracy):
@@ -97,6 +104,8 @@ def firstBetter(s, Ns, classifier, maxTries=100):
 	return s
 
 def percentageBetter(s , Ns, classifier, percentage=0.2, include=True):
+	global training
+	global tests
 	maxAcc = 0
 	bestSol = Solution()
 	if include:
@@ -110,11 +119,15 @@ def percentageBetter(s , Ns, classifier, percentage=0.2, include=True):
 	return bestSol
 
 def randomNeighbour(s, Ns, classifier):
-	i = randint(0,len(Ns))
+	global training
+	global tests
+	i = randint(0,len(Ns)-1)
 	Ns[i].accuracy = objectiveFunction(classifier,Ns[i].createSubmatrix(training),tests)
 	return (Ns[i])
 
-def neighbours1(s):
+def neighbours1(s,k=1):
+	global training
+	global tests
 	result = []
 	for i in range(training.shape[0]):
 		if not i in s.positions:
@@ -123,14 +136,16 @@ def neighbours1(s):
 	return result
 
 def localSearch(mejoramiento):
+	global training
+	global tests
 	data = txtToMatrix(sys.argv[1])	
 	clf = LinearSVC()
 	initTrainSet(clf, data)
 	initTestSet(training)
 	s = Solution()
-	s.accuracy = objectiveFunction(classifier, s.createSubmatrix(training), tests)
+	s.accuracy = objectiveFunction(clf, s.createSubmatrix(training), tests)
 	star = s
-	print("#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	print("INI#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 	while True:
 		Ns = neighbours1(s)
 		prevS = s
@@ -138,9 +153,8 @@ def localSearch(mejoramiento):
 		if(s == prevS):
 			break
 		else:
-			actualSol = s
-	print("Quedamos: ",actualSol[0].shape[0])
-	print("con ",accS)
+			prevS = s
+	print("#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 
 def main():
 	data = txtToMatrix(sys.argv[1])
@@ -151,7 +165,7 @@ def main():
 	maxAcc = 0
 	bestX_train = bestX_test = bestD_train = bestD_test = np.array(1)
 	for i in range(10):
-		X_train, X_test, d_train, d_test = split(Xs,Ds,0.2)
+		X_train, X_test, d_train, d_test = split(Xs,Ds,0.1)
 		acc = objectiveFunction(clf,X_train,d_train,X_test,d_test)
 		print("Hola",acc)
 		if(maxAcc<acc):
