@@ -159,10 +159,10 @@ def localSearch(mejoramiento):
 	s = Solution()
 	objectiveFunction(s, clf)
 	#print("Fo ini: ",s.fo)
-	print("Fo INI: ", s.fo)
+	#print("Fo INI: ", s.fo)
 	firstAcc = s.accuracy
 	star = s
-	print("INI#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	print("# Initial Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 	ite = 0
 	while True:
 		Ns = neighbours1(s)
@@ -175,7 +175,7 @@ def localSearch(mejoramiento):
 		ite +=1
 		#print(ite)
 	print("#Iteraciones: ",ite)
-	print("#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	print("#Final Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 
 if __name__ == '__main__':
 	localSearch(percentageBetter)
