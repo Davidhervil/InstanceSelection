@@ -9,23 +9,29 @@ from random import randint
 
 training = np.array(1)
 tests = []
+firstAcc = 1
 
 def initTrainSet(classifier, matrix):
 	global training
 	Xs, Ds = obtainXFx(matrix)
 	maxAcc = 0
-	bestX_train = bestD_train = np.array(1)
-	for i in range(10):
+	bestX_train = bestD_train = bestX_test = bestD_test = np.array(1)
+	for i in range(1):
 		X_train, X_test, d_train, d_test = split(Xs,Ds,0.2)
-		acc = objectiveFunction1(classifier,X_train,d_train,X_test,d_test)
+		acc = classifierAccuracy1(classifier,X_train,d_train,X_test,d_test)
 		if(maxAcc<=acc):
 			maxAcc = acc
 			bestX_train = X_train
 			bestD_train = d_train
+			bestX_test = X_test
+			bestD_test = d_test
 	#print(bestX_train.ndim, bestD_train.ndim)
 	bestX_train.astype('str')
 	bestD_train.astype('str')
+	bestX_test.astype('str')
+	bestD_test.astype('str')
 	training = np.append(bestX_train,bestD_train[...,None] ,1)
+	test = [np.append(bestX_train,bestD_train[...,None] ,1)]
 
 def initTestSet(matrix, k=10):
 	global tests
@@ -39,14 +45,17 @@ def initTestSet(matrix, k=10):
 		tests.append(m)
 
 class Solution:
-	def __init__(self, p = set(), acc = 0):
+	def __init__(self, p = set(), acc = 0, fo = 0):
 		self.positions = p   	# Lista de enteros
 		self.accuracy  = acc	# Float
+		self.fo = 0
 
 	def createSubmatrix(self, A):
 		# A -> A'
 		B = A
-		for i in self.positions:
+		lista = list(self.positions)
+		lista.reverse()
+		for i in lista:
 			B = np.delete(B, i, 0)
 		return B
 
@@ -76,13 +85,13 @@ def split(X,d,validate_size,random_stat=randint(11,100)):
 							test_size=validate_size,
 							random_state=None)
 
-def objectiveFunction1(classifier, trainingData, trainingRespones, testData,
+def classifierAccuracy1(classifier, trainingData, trainingRespones, testData,
 					  testResponses):
 	classifier.fit(trainingData,trainingRespones)
 	y_pred = classifier.predict(testData)
 	return metrics.accuracy_score(testResponses,y_pred)
 
-def objectiveFunction(classifier, trainingData, testData):
+def classifierAccuracy(classifier, trainingData, testData):
 	# Funcion que recibe un clasificador, una matriz de entrenamiento y
 	# n matrices de prueba y retorna el valor promedio de la precision.
 	x_train, d_train = obtainXFx(trainingData)
@@ -94,18 +103,24 @@ def objectiveFunction(classifier, trainingData, testData):
 		acum += metrics.accuracy_score(d_test,y_pred)
 	return float(acum/len(testData))
 
-def firstBetter(s, Ns, classifier, maxTries=100):
+def objectiveFunction(s,classifier, alfa=0.5):
+	global firstAcc
 	global training
 	global tests
+	s.accuracy = classifierAccuracy(classifier,s.createSubmatrix(training),tests)
+	deltaAcc = -(firstAcc - s.accuracy)
+	deltaInst = (len(s.positions))/training.shape[0]
+	#print(deltaInst)
+	s.fo = deltaAcc*alfa + deltaInst*(1-alfa)
+
+def firstBetter(s, Ns, classifier, maxTries=100):
 	for n in Ns:
-		n.accuracy = objectiveFunction(classifier, n.createSubmatrix(training), tests)
-		if(s.accuracy <= n.accuracy):
+		objectiveFunction(n, classifier)
+		if(s.fo <= n.fo):
 			return n
 	return s
 
 def percentageBetter(s , Ns, classifier, percentage=0.2, include=True):
-	global training
-	global tests
 	maxAcc = 0
 	bestSol = Solution()
 	if include:
@@ -113,21 +128,19 @@ def percentageBetter(s , Ns, classifier, percentage=0.2, include=True):
 
 	porcion = int(len(Ns)*percentage)
 	for i in range(porcion):
-		Ns[i].accuracy = objectiveFunction(classifier,Ns[i].createSubmatrix(training),tests)
-		if(bestSol.accuracy <= Ns[i].accuracy):
+		objectiveFunction(Ns[i], classifier)
+		#print(Ns[i].fo)
+		if(bestSol.fo <= Ns[i].fo):
 			bestSol = Ns[i]
 	return bestSol
 
 def randomNeighbour(s, Ns, classifier):
-	global training
-	global tests
 	i = randint(0,len(Ns)-1)
-	Ns[i].accuracy = objectiveFunction(classifier,Ns[i].createSubmatrix(training),tests)
+	objectiveFunction(Ns[i], classifier)
 	return (Ns[i])
 
 def neighbours1(s,k=1):
 	global training
-	global tests
 	result = []
 	for i in range(training.shape[0]):
 		if not i in s.positions:
@@ -138,14 +151,19 @@ def neighbours1(s,k=1):
 def localSearch(mejoramiento):
 	global training
 	global tests
+	global firstAcc
 	data = txtToMatrix(sys.argv[1])	
 	clf = LinearSVC()
 	initTrainSet(clf, data)
 	initTestSet(training)
 	s = Solution()
-	s.accuracy = objectiveFunction(clf, s.createSubmatrix(training), tests)
+	objectiveFunction(s, clf)
+	#print("Fo ini: ",s.fo)
+	print("Fo INI: ", s.fo)
+	firstAcc = s.accuracy
 	star = s
 	print("INI#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	ite = 0
 	while True:
 		Ns = neighbours1(s)
 		prevS = s
@@ -154,30 +172,12 @@ def localSearch(mejoramiento):
 			break
 		else:
 			prevS = s
+		ite +=1
+		#print(ite)
+	print("#Iteraciones: ",ite)
 	print("#Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 
-def main():
-	data = txtToMatrix(sys.argv[1])
-	Xs, Ds = obtainXFx(data)
-	
-
-	clf = LinearSVC()
-	maxAcc = 0
-	bestX_train = bestX_test = bestD_train = bestD_test = np.array(1)
-	for i in range(10):
-		X_train, X_test, d_train, d_test = split(Xs,Ds,0.1)
-		acc = objectiveFunction(clf,X_train,d_train,X_test,d_test)
-		print("Hola",acc)
-		if(maxAcc<acc):
-			maxAcc = acc
-			bestX_train = X_train
-			bestX_test = X_test
-			bestD_train = d_train
-			bestD_test = d_test
-	print(maxAcc)
-
 if __name__ == '__main__':
-	epsilon = 0.05
 	localSearch(percentageBetter)
 
 
