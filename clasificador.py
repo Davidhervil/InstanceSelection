@@ -13,11 +13,12 @@ firstAcc = 1
 
 def initTrainSet(classifier, matrix):
 	global training
+	global tests
 	Xs, Ds = obtainXFx(matrix)
 	maxAcc = 0
 	bestX_train = bestD_train = bestX_test = bestD_test = np.array(1)
 	for i in range(1):
-		X_train, X_test, d_train, d_test = split(Xs,Ds,0.2)
+		X_train, X_test, d_train, d_test = split(Xs,Ds,0.3)
 		acc = classifierAccuracy1(classifier,X_train,d_train,X_test,d_test)
 		if(maxAcc<=acc):
 			maxAcc = acc
@@ -31,7 +32,7 @@ def initTrainSet(classifier, matrix):
 	bestX_test.astype('str')
 	bestD_test.astype('str')
 	training = np.append(bestX_train,bestD_train[...,None] ,1)
-	test = [np.append(bestX_train,bestD_train[...,None] ,1)]
+	tests = [np.append(bestX_train,bestD_train[...,None] ,1)]
 
 def initTestSet(matrix, k=10):
 	global tests
@@ -104,7 +105,7 @@ def classifierAccuracy(classifier, trainingData, testData):
 		acum += metrics.accuracy_score(d_test,y_pred)
 	return float(acum/len(testData))
 
-def objectiveFunction(s,classifier, alfa=1):
+def objectiveFunction(s,classifier, alfa=0.85):
 	global firstAcc
 	global training
 	global tests
@@ -157,13 +158,14 @@ def localSearch(mejoramiento):
 	data = txtToMatrix(sys.argv[1])	
 	clf = LinearSVC()
 	initTrainSet(clf, data)
-	initTestSet(training)
+	#initTestSet(training)
 	s = Solution()
 	objectiveFunction(s, clf)
 	#print("Fo ini: ",s.fo)
 	#print("Fo INI: ", s.fo)
 	firstAcc = s.accuracy
 	star = s
+	#print(len(s.positions))
 	print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 	ite = 0
 	while True:
@@ -181,7 +183,7 @@ def localSearch(mejoramiento):
 	print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
 
 if __name__ == '__main__':
-	localSearch(firstBetter)
+	localSearch(percentageBetter)
 
 
 
