@@ -6,18 +6,20 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn import metrics
 from random import randint
-
+import glob
+import time
 training = np.array(1)
 tests = []
 firstAcc = 1
 
 def initTrainSet(classifier, matrix):
 	global training
+	global tests
 	Xs, Ds = obtainXFx(matrix)
 	maxAcc = 0
 	bestX_train = bestD_train = bestX_test = bestD_test = np.array(1)
 	for i in range(1):
-		X_train, X_test, d_train, d_test = split(Xs,Ds,0.2)
+		X_train, X_test, d_train, d_test = split(Xs,Ds,0.3)
 		acc = classifierAccuracy1(classifier,X_train,d_train,X_test,d_test)
 		if(maxAcc<=acc):
 			maxAcc = acc
@@ -31,7 +33,7 @@ def initTrainSet(classifier, matrix):
 	bestX_test.astype('str')
 	bestD_test.astype('str')
 	training = np.append(bestX_train,bestD_train[...,None] ,1)
-	test = [np.append(bestX_train,bestD_train[...,None] ,1)]
+	tests = [np.append(bestX_train,bestD_train[...,None] ,1)]
 
 def initTestSet(matrix, k=10):
 	global tests
@@ -104,7 +106,7 @@ def classifierAccuracy(classifier, trainingData, testData):
 		acum += metrics.accuracy_score(d_test,y_pred)
 	return float(acum/len(testData))
 
-def objectiveFunction(s,classifier, alfa=1):
+def objectiveFunction(s,classifier, alfa=0.85):
 	global firstAcc
 	global training
 	global tests
@@ -150,21 +152,21 @@ def neighbours1(s,k=1):
 			result.append(sol)
 	return result
 
-def localSearch(mejoramiento):
+def localSearch(mejoramiento, instance):
 	global training
 	global tests
 	global firstAcc
-	data = txtToMatrix(sys.argv[1])	
+	data = txtToMatrix(instance)	
 	clf = LinearSVC()
 	initTrainSet(clf, data)
-	initTestSet(training)
+	#initTestSet(training)
 	s = Solution()
 	objectiveFunction(s, clf)
 	#print("Fo ini: ",s.fo)
 	#print("Fo INI: ", s.fo)
 	firstAcc = s.accuracy
 	star = s
-	print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	#print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 	ite = 0
 	while True:
 		Ns = neighbours1(s)
@@ -177,11 +179,38 @@ def localSearch(mejoramiento):
 			#print("Improved:",s.accuracy,"Fo:",s.fo)
 		ite +=1
 		#print(ite)
-	print("#Iteraciones:",ite)
-	print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
+	#print("#Iteraciones:",ite)
+	#print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
+	return len(s.positions) , -firstAcc + s.accuracy, ite
 
 if __name__ == '__main__':
-	localSearch(firstBetter)
+	#localSearch(firstBetter)
+	instanceFolder = "datasets"
+	instances = glob.glob(instanceFolder + "/*.txt")
+	for instance in instances:
+		f = open("result_" + instance.split('/')[1], 'w+')
+		print("DATASET: " + instance)
+		print("percentageBetter")
+		print("d_inst , d_acc, total_time, ite")
+
+		f.write("percentageBetter\n")
+		for i in range(0,10):
+			start_time = time.time()
+			d_inst, d_acc, ite = localSearch(percentageBetter, instance)
+			total_time = time.time() - start_time
+			print(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," + str(ite))
+			f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
+		print("firstBetter")
+		print("d_inst , d_acc, total_time, ite")
+		f.write("\nfirstBetter\n")
+		for i in range(0,10):
+			start_time = time.time()
+			d_inst, d_acc, ite  = localSearch(firstBetter, instance)
+			total_time = time.time() - start_time
+			print(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," + str(ite))
+			f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
+			
+		f.close()
 
 
 
