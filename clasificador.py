@@ -106,7 +106,7 @@ def classifierAccuracy(classifier, trainingData, testData):
 		acum += metrics.accuracy_score(d_test,y_pred)
 	return float(acum/len(testData))
 
-def objectiveFunction(s,classifier, alfa=0.85):
+def objectiveFunction(s,classifier, alfa=0.8):
 	global firstAcc
 	global training
 	global tests
@@ -159,11 +159,8 @@ def localSearch(mejoramiento, instance):
 	data = txtToMatrix(instance)	
 	clf = LinearSVC()
 	initTrainSet(clf, data)
-	#initTestSet(training)
 	s = Solution()
 	objectiveFunction(s, clf)
-	#print("Fo ini: ",s.fo)
-	#print("Fo INI: ", s.fo)
 	firstAcc = s.accuracy
 	star = s
 	#print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
@@ -176,68 +173,45 @@ def localSearch(mejoramiento, instance):
 			break
 		else:
 			prevS = s
-			#print("Improved:",s.accuracy,"Fo:",s.fo)
 		ite +=1
 		#print(ite)
 	#print("#Iteraciones:",ite)
 	#print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
-	return len(s.positions) , -firstAcc + s.accuracy, ite
+	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
+
+	result = [len(s.positions) , firstAcc, s.accuracy, ite]
+	string = '\t'.join(str(x) for x in result)
+	return string
 
 if __name__ == '__main__':
-	#localSearch(firstBetter)
-	instanceFolder = "datasets"
-	instances = glob.glob(instanceFolder + "/*.txt")
-	for instance in instances:
-		f = open("result_" + instance.split('/')[1], 'w+')
-		print("DATASET: " + instance)
-		print("percentageBetter")
-		print("d_inst , d_acc, total_time, ite")
 
-		f.write("percentageBetter\n")
-		for i in range(0,10):
-			start_time = time.time()
-			d_inst, d_acc, ite = localSearch(percentageBetter, instance)
-			total_time = time.time() - start_time
-			print(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," + str(ite))
-			f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
-		print("firstBetter")
-		print("d_inst , d_acc, total_time, ite")
-		f.write("\nfirstBetter\n")
-		for i in range(0,10):
-			start_time = time.time()
-			d_inst, d_acc, ite  = localSearch(firstBetter, instance)
-			total_time = time.time() - start_time
-			print(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," + str(ite))
-			f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
+	# Para cada tamanio de instancia
+	# localSearch(firstBetter, sys.argv[1])
+	datasetFolder = "datasets/"
+	resultsFolder = "Results/"
+	sizeFolders = ["Small/", "Medium/", "Large/"]
+	for fd in sizeFolders:
+		instanceFolder = datasetFolder + fd
+		instances = glob.glob(instanceFolder + "/*.txt")
+		for instance in instances:
+			aux = instance.split("/")
+			direcc = resultsFolder + fd + "result_" + aux[len(aux)-1]
+			f = open(direcc, 'w+')
+			print("Running: " + instance)
 			
-		f.close()
+			f.write("percentageBetter\n")
+			for i in range(0,10):
+				start_time = time.time()
+				result = localSearch(percentageBetter, instance)
+				total_time = time.time() - start_time
+				f.write(result + "\t" + str(total_time) + "\n")
 
-
-
-
-
-"""def main():
-	data = txtToMatrix(sys.argv[1])
-	X, d = obtainXD(data)
-	X_train, X_test, d_train, d_test = split(X,d,0.2)
-	#X_train = preprocessing.scale(X_train)
-	#X_test = preprocessing.scale(X_test)
-	#X_train = preprocessing.normalize(X_train)
-	#X_test = preprocessing.normalize(X_test)
-	clf = SGDClassifier(n_jobs = -1,shuffle = False)
-	clf.fit(X_train, d_train)
-	y_pred = clf.predict(X_test)
-	#print(y_pred)
-	print (metrics.accuracy_score(d_test, y_pred))
-	#print (metrics.classification_report(d_test, y_pred))
-	#print(clf.coef_)
-	print(clf.n_iter_)
-	print("###")
-	clf2 = LinearSVC()
-	clf2.fit(X_train, d_train)
-	y_pred = clf2.predict(X_test)
-	#print(y_pred)
-	print (metrics.accuracy_score(d_test, y_pred))
-	#print (metrics.classification_report(d_test, y_pred))
-	#print(clf.coef_)
-"""
+			f.write("\nfirstBetter\n")
+			for i in range(0,10):
+				start_time = time.time()
+				result = localSearch(firstBetter, instance)
+				total_time = time.time() - start_time
+				f.write(result + "\t" + str(total_time) + "\n")
+				
+			print("Results: " + direcc+ "\n")
+			f.close()
