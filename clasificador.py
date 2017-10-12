@@ -8,6 +8,7 @@ from sklearn import metrics
 from random import randint
 import glob
 import time
+from pathlib import Path
 training = np.array(1)
 tests = []
 firstAcc = 1
@@ -179,7 +180,7 @@ def localSearch(mejoramiento, instance):
 	#print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
-	result = [len(s.positions) , firstAcc, s.accuracy, ite]
+	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
 	string = '\t'.join(str(x) for x in result)
 	return string
 
@@ -196,6 +197,10 @@ if __name__ == '__main__':
 		for instance in instances:
 			aux = instance.split("/")
 			direcc = resultsFolder + fd + "result_" + aux[len(aux)-1]
+			my_file = Path(direcc)
+			if my_file.is_file():
+				print("Ya existe: " + direcc)
+				continue
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
