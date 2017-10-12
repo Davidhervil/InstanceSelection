@@ -177,7 +177,11 @@ def localSearch(mejoramiento, instance):
 		#print(ite)
 	#print("#Iteraciones:",ite)
 	#print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
-	return len(s.positions) , s.accuracy-firstAcc, ite
+	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
+
+	result = [len(s.positions) , firstAcc, s.accuracy, ite]
+	string = '\t'.join(str(x) for x in result)
+	return string
 
 if __name__ == '__main__':
 
@@ -198,17 +202,16 @@ if __name__ == '__main__':
 			f.write("percentageBetter\n")
 			for i in range(0,10):
 				start_time = time.time()
-				d_inst, d_acc, ite = localSearch(percentageBetter, instance)
+				result = localSearch(percentageBetter, instance)
 				total_time = time.time() - start_time
-				f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
+				f.write(result + "\t" + str(total_time) + "\n")
 			
 			f.write("\nfirstBetter\n")
 			for i in range(0,10):
 				start_time = time.time()
-				d_inst, d_acc, ite  = localSearch(firstBetter, instance)
+				result = localSearch(firstBetter, instance)
 				total_time = time.time() - start_time
-				f.write(str(d_inst)+","+ str(d_acc) +","+ str(total_time) + "," +str(ite)+"\n")
-
-
+				f.write(result + "\t" + str(total_time) + "\n")
+				
 			print("Results: " + direcc+ "\n")
 			f.close()
