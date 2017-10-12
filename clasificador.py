@@ -54,6 +54,7 @@ class Solution:
 		# A -> A'
 		B = A
 		lista = list(self.positions)
+		lista.sort()
 		lista.reverse()
 		for i in lista:
 			B = np.delete(B, i, 0)
@@ -103,7 +104,7 @@ def classifierAccuracy(classifier, trainingData, testData):
 		acum += metrics.accuracy_score(d_test,y_pred)
 	return float(acum/len(testData))
 
-def objectiveFunction(s,classifier, alfa=0.5):
+def objectiveFunction(s,classifier, alfa=1):
 	global firstAcc
 	global training
 	global tests
@@ -116,6 +117,7 @@ def objectiveFunction(s,classifier, alfa=0.5):
 def firstBetter(s, Ns, classifier, maxTries=100):
 	for n in Ns:
 		objectiveFunction(n, classifier)
+		#print(n.accuracy, n.fo)
 		if(s.fo <= n.fo):
 			return n
 	return s
@@ -144,8 +146,8 @@ def neighbours1(s,k=1):
 	result = []
 	for i in range(training.shape[0]):
 		if not i in s.positions:
-			s = Solution(p=s.positions | {i})
-			result.append(s)
+			sol = Solution(p=s.positions | {i})
+			result.append(sol)
 	return result
 
 def localSearch(mejoramiento):
@@ -162,7 +164,7 @@ def localSearch(mejoramiento):
 	#print("Fo INI: ", s.fo)
 	firstAcc = s.accuracy
 	star = s
-	print("# Initial Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
 	ite = 0
 	while True:
 		Ns = neighbours1(s)
@@ -172,13 +174,14 @@ def localSearch(mejoramiento):
 			break
 		else:
 			prevS = s
+			#print("Improved:",s.accuracy,"Fo:",s.fo)
 		ite +=1
 		#print(ite)
-	print("#Iteraciones: ",ite)
-	print("#Final Samples: ",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	print("#Iteraciones:",ite)
+	print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
 
 if __name__ == '__main__':
-	localSearch(percentageBetter)
+	localSearch(firstBetter)
 
 
 
