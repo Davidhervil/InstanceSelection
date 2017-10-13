@@ -1,0 +1,6 @@
+percentageBetter
+MediaIni	MediaIS	MAccIni+-stdev	MAccIS+-stdev	Media Ite	Tiempo Medio
+105.0	61.35	0.968571428572+-0.0123982913097	0.98+-0.0106591452177	43.65	9.05651562214
+firstBetter
+MediaIni	MediaIS	MAccIni+-stdev	MAccIS+-stdev	Media Ite	Tiempo Medio
+105.0	30.85	0.962380952381+-0.011755962295	0.979047619048+-0.010523928599	74.15	3.81299928427
