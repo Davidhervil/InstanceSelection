@@ -209,6 +209,7 @@ if __name__ == '__main__':
 				start_time = time.time()
 				result = localSearch(percentageBetter, instance)
 				total_time = time.time() - start_time
+				print(result + "\t" + str(total_time))
 				f.write(result + "\t" + str(total_time) + "\n")
 			
 			f.write("\nfirstBetter\n")
@@ -216,6 +217,7 @@ if __name__ == '__main__':
 				start_time = time.time()
 				result = localSearch(firstBetter, instance)
 				total_time = time.time() - start_time
+				print(result + "\t" + str(total_time))
 				f.write(result + "\t" + str(total_time) + "\n")
 				
 			print("Results: " + direcc+ "\n")
