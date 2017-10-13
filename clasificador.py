@@ -211,7 +211,7 @@ if __name__ == '__main__':
 				total_time = time.time() - start_time
 				print(result + "\t" + str(total_time))
 				f.write(result + "\t" + str(total_time) + "\n")
-			
+
 			f.write("\nfirstBetter\n")
 			for i in range(0,10):
 				start_time = time.time()
