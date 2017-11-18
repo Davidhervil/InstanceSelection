@@ -2,17 +2,20 @@ import sys
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn import preprocessing
 from sklearn import metrics
 from random import randint
 import glob
 import time
 from pathlib import Path
-training = np.array(1)
-tests = []
-firstAcc = 1
 
+# GLOBAL VARIABLES
+training = np.array(1)	# Conjunto de entrenamiento
+tests = []				# Conjunto de pruebas
+firstAcc = 1			# Primera precision
+
+#------------------------- PREPROCESAMIENTO DE DATOS ------------------------#
 def initTrainSet(classifier, matrix):
 	global training
 	global tests
@@ -35,17 +38,6 @@ def initTrainSet(classifier, matrix):
 	bestD_test.astype('str')
 	training = np.append(bestX_train,bestD_train[...,None] ,1)
 	tests = [np.append(bestX_train,bestD_train[...,None] ,1)]
-
-def initTestSet(matrix, k=10):
-	global tests
-	filas = matrix.shape[0]
-	quantity = int(filas / k)
-	for i in range(0, filas, quantity):
-		if(i+quantity < filas):
-			m = matrix[i:(i+quantity),:]
-		else:
-			m = matrix[i:,:]
-		tests.append(m)
 
 class Solution:
 	def __init__(self, p = set(), acc = 0, fo = 0):
@@ -72,7 +64,6 @@ def txtToMatrix(path):
 		line = line.strip('\n')
 		data = line.split(',')
 		matrix.append(data)
-	f.close()
 	return np.array(matrix)
 
 def obtainXFx(matrix):
@@ -154,31 +145,177 @@ def neighbours1(s,k=1):
 			result.append(sol)
 	return result
 
-def localSearch(mejoramiento, instance):
+def k_neighbours(s,k=2):
+	global training
+	res = neighbours1(s)
+	result = []
+	for i in range(training.shape[0]):
+		extract = set()
+		for j in range(i,training.shape[0]):
+			if not j in s.positions:
+				extract.add(j)
+				if len(extract) >= k:
+					sol = Solution(p=s.positions | extract)
+					result.append(sol)
+					break
+	return result
+# M vecinos mas cercanos.
+# K_neighbours.
+# Sacar de las clases mas grandotas.
+
+#------------------------- BUSQUEDA LOCAL -------------------------#
+def setupExperiment(instance):
 	global training
 	global tests
 	global firstAcc
-	data = txtToMatrix(instance)	
-	clf = LinearSVC()
-	initTrainSet(clf, data)
-	s = Solution()
-	objectiveFunction(s, clf)
-	firstAcc = s.accuracy
-	star = s
-	#print("#Initial Samples:",training.shape[0] - len(s.positions), "Acc: ", s.accuracy)
+	global clf
+	training = np.array(1)	# Conjunto de entrenamiento
+	tests = []				# Conjunto de pruebas
+	firstAcc = 1			# Primera precision
+	clf = None
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution()					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	ite = 0		
+	return s
+
+def localSearch(vecindad, mejoramiento, s, clf):
+	""" 
+		- Vecindad: Tipo de vecindad a utilizar.
+		- Mejoramiento: Tipo de mejoramiento a utilizar.
+		- s: Solucion actual
+	"""
+	#setupExperiment()
 	ite = 0
-	while True:
-		Ns = neighbours1(s)
-		prevS = s
-		s = mejoramiento(s,Ns,clf)
-		if(s == prevS):
+	while True:			
+		Ns = vecindad(s)			# Obtener la vecindad de s.
+		prevS = s 					# COMP: Verificar mejoramiento.
+		s = mejoramiento(s,Ns,clf)	# Realizar mejoramiento.
+		if(s == prevS):				# Condicion de parada: No mejoramiento.
 			break
-		else:
-			prevS = s
 		ite +=1
-		#print(ite)
-	#print("#Iteraciones:",ite)
-	#print("#Final Samples:",training.shape[0] - len(s.positions), "Acc:", s.accuracy)
+	return s
+
+	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
+	#result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	#string = '\t'.join(str(x) for x in result)
+	#return string
+
+
+#----------------- Metaheuristicas de trayectoria -----------------#
+# Se decide utilizar la busqueda local con PRIMER MEJOR.
+# 
+def VNS(vecindades, mejoramiento, instance):
+	global training
+	global tests
+	global firstAcc
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution()					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	ite = 0	
+	start_time = time.time()		# Tiempo de inicio.
+	ite = 0							# INFO: Numero de iteraciones			
+	while (True):
+		k = 0
+		prevS = s
+		while(k< len(vecindades)):				# Probar todas las vecindades.
+			Ns = vecindades[k](s)				# Generar vecino random
+			sR = randomNeighbour(s, Ns, clf)	
+			#print("Probando con k: ",k)
+			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
+			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
+				k = k + 1
+			else:
+			#	print("mejoro")
+				s = sP
+				k = 0
+		if s.fo == prevS.fo or ite > 5:
+			break
+
+		ite +=1
+	
+	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
+
+	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	string = '\t'.join(str(x) for x in result)
+	return string
+
+def RVNS(vecindades, mejoramiento, instance):
+	global training
+	global tests
+	global firstAcc
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution()					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	ite = 0	
+	start_time = time.time()		# Tiempo de inicio.
+	ite = 0							# INFO: Numero de iteraciones			
+	while (True):
+		k = 0
+		prevS = s
+		while(k< len(vecindades)):				# Probar todas las vecindades.
+			Ns = vecindades[k](s)				# Generar vecino random
+			sP = randomNeighbour(s, Ns, clf)	
+			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
+				k = k + 1
+			else:
+				s = sP
+				k = 0
+		if s.fo == prevS.fo or ite > 5:
+			break
+
+		ite +=1
+	
+	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
+
+	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	string = '\t'.join(str(x) for x in result)
+	return string
+
+def proba_SVNS(s, sP, alfa = 0.3):
+	return sP.fo + alfa*(abs(sP.fo-s.fo)) > s.fo
+
+def SVNS(vecindades, mejoramiento, instance):
+	global training
+	global tests
+	global firstAcc
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution()					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	ite = 0	
+	start_time = time.time()		# Tiempo de inicio.
+	ite = 0							# INFO: Numero de iteraciones
+	estrella = s			
+	while (True):
+		k = 0
+		prevS = s
+		while(k< len(vecindades)):				# Probar todas las vecindades.
+			Ns = vecindades[k](s)				# Generar vecino random
+			sR = randomNeighbour(s, Ns, clf)	
+			#print("Probando con k: ",k)
+			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
+			if sP.fo <= s.fo or proba_SVNS(s,sP):
+				s = sP
+				k = 0
+			else:		# Condicion de cambio de vecindad.
+				k = k + 1
+		if s.fo == prevS.fo or ite > 5:
+			break
+
+		ite +=1
+	
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
 	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
@@ -191,9 +328,12 @@ if __name__ == '__main__':
 	# localSearch(firstBetter, sys.argv[1])
 	datasetFolder = "datasets/"
 	resultsFolder = "Results/"
-	sizeFolders = ["Small/", "Medium/", "Large/"]
+	sizeFolders = ["Small/", "Medium/", "Large/"]	# Tamanos de problemas
+	mejoramientos = [firstBetter, percentageBetter]	# Tipos de mejoramiento (Busqueda Local)
+	vecindades=[neighbours1, k_neighbours]						# Tipos de vecindades
+
 	for fd in sizeFolders:
-		instanceFolder = datasetFolder + fd
+		instanceFolder = datasetFolder + fd 
 		instances = glob.glob(instanceFolder + "/*.txt")
 		for instance in instances:
 			aux = instance.split("/")
@@ -205,21 +345,13 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("percentageBetter\n")
+			f.write("\nVNS\n")
 			for i in range(0,10):
 				start_time = time.time()
-				result = localSearch(percentageBetter, instance)
+				result = VNS(vecindades, firstBetter, instance)
 				total_time = time.time() - start_time
-				print(result + "\t" + str(total_time))
-				f.write(result + "\t" + str(total_time) + "\n")
+				print(str(result) + "\t" + str(total_time))
+				f.write(str(result) + "\t" + str(total_time) + "\n")
 
-			f.write("\nfirstBetter\n")
-			for i in range(0,10):
-				start_time = time.time()
-				result = localSearch(firstBetter, instance)
-				total_time = time.time() - start_time
-				print(result + "\t" + str(total_time))
-				f.write(result + "\t" + str(total_time) + "\n")
-				
 			print("Results: " + direcc+ "\n")
 			f.close()
