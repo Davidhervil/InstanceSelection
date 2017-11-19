@@ -310,7 +310,7 @@ def SVNS(vecindades, mejoramiento, instance):
 			sR = randomNeighbour(s, Ns, clf)	
 			#print("Probando con k: ",k)
 			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
-			if sP.fo <= s.fo or proba_SVNS(s,sP):
+			if sP.fo >= s.fo or proba_SVNS(s,sP):
 				s = sP
 				k = 0
 			else:		# Condicion de cambio de vecindad.
