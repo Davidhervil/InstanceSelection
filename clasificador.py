@@ -5,10 +5,11 @@ from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn import preprocessing
 from sklearn import metrics
-from random import randint
+from random import randint, random
 import glob
 import time
 from pathlib import Path
+from math import exp, log
 
 # GLOBAL VARIABLES
 training = np.array(1)	# Conjunto de entrenamiento
@@ -228,7 +229,10 @@ def VNS(vecindades, mejoramiento, instance):
 			Ns = vecindades[k](s)				# Generar vecino random
 			sR = randomNeighbour(s, Ns, clf)	
 			#print("Probando con k: ",k)
-			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
+			try:
+				sP = localSearch(vecindades[k], mejoramiento, sR, clf)
+			except:
+				k = k + 1
 			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
 				k = k + 1
 			else:
@@ -322,6 +326,83 @@ def SVNS(vecindades, mejoramiento, instance):
 	string = '\t'.join(str(x) for x in result)
 	return string
 
+def g_kConst(T, kConst, k):
+	return T - kConst
+
+def g_alfa(T, alfa = 0.7, k=0):
+	#alfa debe estar entre [0.5 , 0.9]
+	return alfa*T
+
+def g_log(T0,k): #TURBO LENTO
+	return T0/log(k)
+
+def g_ratio(T0,k):
+	return T/(1+k)
+
+def simulatedAnnealing(Tmax, vecindad, g, instance):
+	#Mejores Tmax: 23, 60, 1000
+	# Tarda menos con kneighbours
+	global training
+	global tests
+	global firstAcc
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution()					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	ite = 0	
+	start_time = time.time()		# Tiempo de inicio.
+	ite = 0							# INFO: Numero de iteraciones
+	leBest = s
+	T = Tmax
+	noImprovement = 0
+	maxStall = 100
+	iteracion = 0
+	while noImprovement < maxStall:
+		improved = False
+		rejected = 0
+		Ns = vecindad(s)
+		neighbourhood = len(Ns)
+		while rejected/neighbourhood < 0.6:
+			try:
+				sP = randomNeighbour(s, Ns, clf)
+			except:
+				break
+
+			deltaC = sP.fo - s.fo
+			if deltaC > 0:
+				s = sP
+				if s.fo > leBest.fo:
+					leBest = s
+					improved = True
+					#print("Quitados: ",len(s.positions))
+				Ns = vecindad(s)
+				neighbourhood = len(Ns)
+				rejected = 0
+			else:
+				r = random()
+				if r < exp(deltaC/T) :
+					s = sP
+					Ns = vecindad(s)
+					neighbourhood = len(Ns)
+					rejected = 0
+				else:
+					rejected += 1
+					#print("Rejected: ",rejected)
+
+		T = g(T, k = iteracion)
+		if not improved :
+			noImprovement += 1
+		ite += 1
+		#print(ite)
+
+	result = [training.shape[0], training.shape[0] - len(leBest.positions) , firstAcc, leBest.accuracy, ite]
+	string = '\t'.join(str(x) for x in result)
+	return string
+
+
+
 if __name__ == '__main__':
 
 	# Para cada tamanio de instancia
@@ -345,10 +426,11 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nVNS\n")
+			f.write("\nSA\n")
 			for i in range(0,10):
 				start_time = time.time()
-				result = VNS(vecindades, firstBetter, instance)
+				#result = VNS(vecindades, firstBetter, instance)
+				result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
 				total_time = time.time() - start_time
 				print(str(result) + "\t" + str(total_time))
 				f.write(str(result) + "\t" + str(total_time) + "\n")
