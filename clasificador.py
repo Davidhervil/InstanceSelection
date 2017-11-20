@@ -230,7 +230,11 @@ def VNS(vecindades, mejoramiento, instance):
 		prevS = s
 		while(k< len(vecindades)):				# Probar todas las vecindades.
 			Ns = vecindades[k](s)				# Generar vecino random
-			sR = randomNeighbour(s, Ns, clf)	
+			try:
+				sR = randomNeighbour(s, Ns, clf)
+			except:
+				k = k + 1
+				continue
 			#print("Probando con k: ",k)
 			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
 			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
@@ -268,7 +272,11 @@ def RVNS(vecindades, mejoramiento, instance):
 		prevS = s
 		while(k< len(vecindades)):				# Probar todas las vecindades.
 			Ns = vecindades[k](s)				# Generar vecino random
-			sP = randomNeighbour(s, Ns, clf)	
+			try:
+				sP = randomNeighbour(s, Ns, clf)
+			except:
+				k = k + 1
+				continue
 			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
 				k = k + 1
 			else:
@@ -307,7 +315,11 @@ def SVNS(vecindades, mejoramiento, instance):
 		prevS = s
 		while(k< len(vecindades)):				# Probar todas las vecindades.
 			Ns = vecindades[k](s)				# Generar vecino random
-			sR = randomNeighbour(s, Ns, clf)	
+			try:
+				sR = randomNeighbour(s, Ns, clf)
+			except:
+				k = k + 1
+				continue
 			#print("Probando con k: ",k)
 			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
 			if sP.fo >= s.fo or proba_SVNS(s,sP):
@@ -413,7 +425,7 @@ if __name__ == '__main__':
 	resultsFolder = "Results/"
 	sizeFolders = ["Small/", "Medium/", "Large/"]	# Tamanos de problemas
 	mejoramientos = [firstBetter, percentageBetter]	# Tipos de mejoramiento (Busqueda Local)
-	vecindades=[neighbours1, k_neighbours]						# Tipos de vecindades
+	vecindades=[neighbours1, k_neighbours, lambda s : k_neighbours(s, k=3), lambda s : k_neighbours(s, k=4)]						# Tipos de vecindades
 
 	for fd in sizeFolders:
 		instanceFolder = datasetFolder + fd 
@@ -428,12 +440,13 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nSVNS\n")
+			f.write("\nVNS\n")
 			for i in range(0,10):
 				start_time = time.time()
-				#result = VNS(vecindades, firstBetter, instance)
+				result = VNS(vecindades, firstBetter, instance)
 				#result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
-				result = SVNS(vecindades, firstBetter, instance)
+				#result = SVNS(vecindades, firstBetter, instance)
+				#result = RVNS(vecindades, firstBetter, instance)
 				total_time = time.time() - start_time
 				print(str(result) + "\t" + str(total_time))
 				f.write(str(result) + "\t" + str(total_time) + "\n")
