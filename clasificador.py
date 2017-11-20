@@ -38,7 +38,7 @@ def initTrainSet(classifier, matrix):
 	bestX_test.astype('str')
 	bestD_test.astype('str')
 	training = np.append(bestX_train,bestD_train[...,None] ,1)
-	tests = [np.append(bestX_train,bestD_train[...,None] ,1)]
+	tests = [np.append(bestX_test,bestD_test[...,None] ,1)]
 
 class Solution:
 	def __init__(self, p = set(), acc = 0, fo = 0):
@@ -194,7 +194,10 @@ def localSearch(vecindad, mejoramiento, s, clf):
 	while True:			
 		Ns = vecindad(s)			# Obtener la vecindad de s.
 		prevS = s 					# COMP: Verificar mejoramiento.
-		s = mejoramiento(s,Ns,clf)	# Realizar mejoramiento.
+		try:
+			s = mejoramiento(s,Ns,clf)	# Realizar mejoramiento.
+		except:
+			break
 		if(s == prevS):				# Condicion de parada: No mejoramiento.
 			break
 		ite +=1
@@ -229,10 +232,7 @@ def VNS(vecindades, mejoramiento, instance):
 			Ns = vecindades[k](s)				# Generar vecino random
 			sR = randomNeighbour(s, Ns, clf)	
 			#print("Probando con k: ",k)
-			try:
-				sP = localSearch(vecindades[k], mejoramiento, sR, clf)
-			except:
-				k = k + 1
+			sP = localSearch(vecindades[k], mejoramiento, sR, clf)
 			if (sP.fo <= s.fo):		# Condicion de cambio de vecindad.
 				k = k + 1
 			else:
@@ -313,6 +313,8 @@ def SVNS(vecindades, mejoramiento, instance):
 			if sP.fo >= s.fo or proba_SVNS(s,sP):
 				s = sP
 				k = 0
+				if s.fo > estrella.fo:
+					estrella = s
 			else:		# Condicion de cambio de vecindad.
 				k = k + 1
 		if s.fo == prevS.fo or ite > 5:
@@ -322,7 +324,7 @@ def SVNS(vecindades, mejoramiento, instance):
 	
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
-	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	result = [training.shape[0], training.shape[0] - len(estrella.positions) , firstAcc, estrella.accuracy, ite]
 	string = '\t'.join(str(x) for x in result)
 	return string
 
@@ -426,11 +428,12 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nSA\n")
+			f.write("\nSVNS\n")
 			for i in range(0,10):
 				start_time = time.time()
 				#result = VNS(vecindades, firstBetter, instance)
-				result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
+				#result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
+				result = SVNS(vecindades, firstBetter, instance)
 				total_time = time.time() - start_time
 				print(str(result) + "\t" + str(total_time))
 				f.write(str(result) + "\t" + str(total_time) + "\n")

@@ -5,7 +5,7 @@ if __name__ == '__main__':
 	# Para cada tamanio de instancia
 	# localSearch(firstBetter, sys.argv[1])
 	resultsFolder = "Results/"
-	sizeFolders = ["Small/", "Medium/"] #Agregar Large cuando termine
+	sizeFolders = ["Large/"]#["Small/", "Medium/"] #Agregar Large cuando termine
 	for fd in sizeFolders:
 		instanceResultFolder = resultsFolder + fd
 		results = glob.glob(instanceResultFolder + "/*.txt")
