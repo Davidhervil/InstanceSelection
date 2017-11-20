@@ -77,10 +77,18 @@ def obtainXFx(matrix):
 
 def split(X,d,validate_size,random_stat=randint(11,100)):
 	#print("Semilla", random_stat)
-	return train_test_split(X,
-							d,
-							test_size=validate_size,
-							random_state=None)
+	try:
+		sss = StratifiedShuffleSplit(n_splits=1, test_size=validate_size)
+		for train_index, test_index in sss.split(X, d):
+			#print("TRAIN:", train_index, "TEST:", test_index)
+			X_train, X_test = X[train_index], X[test_index]
+			y_train, y_test = d[train_index], d[test_index]
+		return X_train, X_test, y_train, y_test
+	except:
+		return train_test_split(X,
+								d,
+								test_size=validate_size,
+								random_state=None)
 
 def classifierAccuracy1(classifier, trainingData, trainingRespones, testData,
 					  testResponses):
@@ -440,11 +448,11 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nVNS\n")
+			f.write("\nSA\n")
 			for i in range(0,10):
 				start_time = time.time()
-				result = VNS(vecindades, firstBetter, instance)
-				#result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
+				#result = VNS(vecindades, firstBetter, instance)
+				result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
 				#result = SVNS(vecindades, firstBetter, instance)
 				#result = RVNS(vecindades, firstBetter, instance)
 				total_time = time.time() - start_time
