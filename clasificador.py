@@ -290,7 +290,7 @@ def RVNS(vecindades, mejoramiento, instance):
 			else:
 				s = sP
 				k = 0
-		if s.fo == prevS.fo or ite > 5:
+		if ite > 1000:
 			break
 
 		ite +=1
@@ -448,13 +448,13 @@ if __name__ == '__main__':
 			f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nSA\n")
+			f.write("\nRVNS\n")
 			for i in range(0,10):
 				start_time = time.time()
 				#result = VNS(vecindades, firstBetter, instance)
-				result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
+				#result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
 				#result = SVNS(vecindades, firstBetter, instance)
-				#result = RVNS(vecindades, firstBetter, instance)
+				result = RVNS(vecindades, firstBetter, instance)
 				total_time = time.time() - start_time
 				print(str(result) + "\t" + str(total_time))
 				f.write(str(result) + "\t" + str(total_time) + "\n")
