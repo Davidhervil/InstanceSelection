@@ -553,7 +553,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "RVNS":
 					result = RVNS(vecindades, firstBetter, instance)
 				elif sys.argv[1] == "BA":
-					result = bee(n=10, m=5, e=2, elite=2, other=3, instance=instance)
+					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
