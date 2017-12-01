@@ -5,11 +5,12 @@ from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn import preprocessing
 from sklearn import metrics
-from random import randint, random
+from random import randint, random, sample, shuffle
 import glob
 import time
 from pathlib import Path
 from math import exp, log
+from multiprocessing import Pool
 
 # GLOBAL VARIABLES
 training = np.array(1)	# Conjunto de entrenamiento
@@ -41,7 +42,7 @@ def initTrainSet(classifier, matrix):
 	tests = [np.append(bestX_test,bestD_test[...,None] ,1)]
 
 class Solution:
-	def __init__(self, p = set(), acc = 0, fo = 0):
+	def __init__(self, p, acc = 0, fo = 0):
 		self.positions = p   	# Lista de enteros
 		self.accuracy  = acc	# Float
 		self.fo = 0
@@ -52,8 +53,9 @@ class Solution:
 		lista = list(self.positions)
 		lista.sort()
 		lista.reverse()
-		for i in lista:
-			B = np.delete(B, i, 0)
+		for i in range(len(self.positions)-1,-1,-1):
+			if self.positions[i] == 1:
+				B = np.delete(B, i, 0)
 		return B
 
 #############################################################################
@@ -114,7 +116,7 @@ def objectiveFunction(s,classifier, alfa=0.8):
 	global tests
 	s.accuracy = classifierAccuracy(classifier,s.createSubmatrix(training),tests)
 	deltaAcc = -(firstAcc - s.accuracy)
-	deltaInst = (len(s.positions))/training.shape[0]
+	deltaInst = (sum(s.positions))/training.shape[0]
 	#print(deltaInst)
 	s.fo = deltaAcc*alfa + deltaInst*(1-alfa)
 
@@ -128,7 +130,7 @@ def firstBetter(s, Ns, classifier, maxTries=100):
 
 def percentageBetter(s , Ns, classifier, percentage=0.2, include=True):
 	maxAcc = 0
-	bestSol = Solution()
+	bestSol = Solution([0]*training.shape[0])
 	if include:
 		bestSol = s
 
@@ -149,8 +151,10 @@ def neighbours1(s,k=1):
 	global training
 	result = []
 	for i in range(training.shape[0]):
-		if not i in s.positions:
-			sol = Solution(p=s.positions | {i})
+		if s.positions[i]==0:
+			new = s.positions.copy()
+			new[i] = 1
+			sol = Solution(p=new.copy())
 			result.append(sol)
 	return result
 
@@ -159,12 +163,14 @@ def k_neighbours(s,k=2):
 	res = neighbours1(s)
 	result = []
 	for i in range(training.shape[0]):
-		extract = set()
+		extract = s.positions.copy()
+		counter = 0
 		for j in range(i,training.shape[0]):
-			if not j in s.positions:
-				extract.add(j)
-				if len(extract) >= k:
-					sol = Solution(p=s.positions | extract)
+			if s.positions[j]==0:
+				extract[j] = 1
+				counter += 1
+				if counter >= k:
+					sol = Solution(p=extract.copy())
 					result.append(sol)
 					break
 	return result
@@ -185,7 +191,7 @@ def setupExperiment(instance):
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
 	clf = LinearSVC()				# Inicializar clasificador a utilizar.
 	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
-	s = Solution()					# Inicializar Solucion.
+	s = Solution([0]*training.shape[0])					# Inicializar Solucion.
 	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
 	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
 	ite = 0		
@@ -227,7 +233,7 @@ def VNS(vecindades, mejoramiento, instance):
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
 	clf = LinearSVC()				# Inicializar clasificador a utilizar.
 	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
-	s = Solution()					# Inicializar Solucion.
+	s = Solution([0]*training.shape[0])					# Inicializar Solucion.
 	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
 	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
 	ite = 0	
@@ -258,7 +264,7 @@ def VNS(vecindades, mejoramiento, instance):
 	
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
-	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	result = [training.shape[0], training.shape[0] - sum(s.positions) , firstAcc, s.accuracy, ite]
 	string = '\t'.join(str(x) for x in result)
 	return string
 
@@ -269,7 +275,7 @@ def RVNS(vecindades, mejoramiento, instance):
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
 	clf = LinearSVC()				# Inicializar clasificador a utilizar.
 	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
-	s = Solution()					# Inicializar Solucion.
+	s = Solution([0]*training.shape[0])					# Inicializar Solucion.
 	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
 	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
 	ite = 0	
@@ -297,7 +303,7 @@ def RVNS(vecindades, mejoramiento, instance):
 	
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
-	result = [training.shape[0], training.shape[0] - len(s.positions) , firstAcc, s.accuracy, ite]
+	result = [training.shape[0], training.shape[0] - sum(s.positions) , firstAcc, s.accuracy, ite]
 	string = '\t'.join(str(x) for x in result)
 	return string
 
@@ -311,7 +317,7 @@ def SVNS(vecindades, mejoramiento, instance):
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
 	clf = LinearSVC()				# Inicializar clasificador a utilizar.
 	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
-	s = Solution()					# Inicializar Solucion.
+	s = Solution([0]*training.shape[0])					# Inicializar Solucion.
 	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
 	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
 	ite = 0	
@@ -344,7 +350,7 @@ def SVNS(vecindades, mejoramiento, instance):
 	
 	# FORMATO: d_inst  | first_acc | final_acc | #iter | time
 
-	result = [training.shape[0], training.shape[0] - len(estrella.positions) , firstAcc, estrella.accuracy, ite]
+	result = [training.shape[0], training.shape[0] - sum(estrella.positions) , firstAcc, estrella.accuracy, ite]
 	string = '\t'.join(str(x) for x in result)
 	return string
 
@@ -361,18 +367,21 @@ def g_log(T0,k): #TURBO LENTO
 def g_ratio(T0,k):
 	return T/(1+k)
 
-def simulatedAnnealing(Tmax, vecindad, g, instance):
+def simulatedAnnealing(Tmax, vecindad, g, instance, s = None, clf = None):
 	#Mejores Tmax: 23, 60, 1000
 	# Tarda menos con kneighbours
 	global training
 	global tests
 	global firstAcc
-	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
-	clf = LinearSVC()				# Inicializar clasificador a utilizar.
-	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
-	s = Solution()					# Inicializar Solucion.
-	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
-	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+	aux = False
+	if s == None:	
+		data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+		clf = LinearSVC()				# Inicializar clasificador a utilizar.
+		initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+		s = Solution([0]*training.shape[0])					# Inicializar Solucion.
+		objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+		firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+		aux = True
 	ite = 0	
 	start_time = time.time()		# Tiempo de inicio.
 	ite = 0							# INFO: Numero de iteraciones
@@ -386,6 +395,8 @@ def simulatedAnnealing(Tmax, vecindad, g, instance):
 		rejected = 0
 		Ns = vecindad(s)
 		neighbourhood = len(Ns)
+		if neighbourhood == 0:
+			break
 		while rejected/neighbourhood < 0.6:
 			try:
 				sP = randomNeighbour(s, Ns, clf)
@@ -419,11 +430,92 @@ def simulatedAnnealing(Tmax, vecindad, g, instance):
 		ite += 1
 		#print(ite)
 
-	result = [training.shape[0], training.shape[0] - len(leBest.positions) , firstAcc, leBest.accuracy, ite]
-	string = '\t'.join(str(x) for x in result)
-	return string
+	if aux == True:
+		result = [training.shape[0], training.shape[0] - sum(leBest.positions) , firstAcc, leBest.accuracy, ite]
+		string = '\t'.join(str(x) for x in result)
+		return string
+	return leBest
+
+def genRandSol(many):
+	result = []
+	for k in range(many):
+		numero = randint(0,int(training.shape[0]*0.4))
+		aux = [1 for i in range(numero)]+[0]*(training.shape[0]-numero)
+		shuffle(aux)
+		result.append(Solution(p=aux.copy()))
+
+	return result
+
+def wrapperF(x):
+		sol = x[0]
+		clf = x[1]
+		return simulatedAnnealing(23,neighbours1,g_alfa,None,sol,clf)
+
+def beeIntensify(sites,bees,clf):
+	
+
+	BestIntensified = []
+	for site in sites :
+		Ns = k_neighbours(site) + [site]
+		sampled = sample(Ns,min(bees,len(Ns)))
+		sampled = [(s,clf) for s in sampled]
+		sampleds = []
+		with Pool(bees) as p:
+			sampleds = p.map(wrapperF,sampled)
+		if sampleds == []:
+			continue
+		BestIntensified.append(max(sampleds, key = lambda x: x.fo))
+
+	return BestIntensified
+
+def bee(n, m, e, elite, other, instance):
+	global training
+	global tests
+	global firstAcc
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution([0]*training.shape[0])					# Inicializar Solucion.
+	objectiveFunction(s, clf)		# Calcular la funcion objetivo de la solucion inicial.
+	firstAcc = s.accuracy 			# Primer valor de Fo para usar de referencia.
+
+	P = genRandSol(n)
+	for sol in P:
+			objectiveFunction(sol,clf)
+	Pm = []
+	ite = 0
+	best = s
+	while ite<5:	
+		for sol in P:
+			if len(Pm) < m:
+				Pm.append(sol)
+			else:
+				mini = min(Pm, key = lambda x: x.fo)
+				if sol.fo > mini.fo:
+					Pm.remove(mini)
+					Pm.append(sol)
+
+		Pm = sorted(Pm, key= lambda x : x.fo)	
+
+		bestEs = beeIntensify(Pm[m-e:m], elite, clf)
+		bestOther = beeIntensify(Pm[:m-e], other, clf)
+
+		Pm = bestEs + bestOther	
 
 
+		newOnes = genRandSol(n-m)
+		for new in newOnes:
+			objectiveFunction(new,clf)
+		P = Pm + newOnes
+
+		ultimateBee = max(P, key = lambda x : x.fo)
+		if ultimateBee.fo > best.fo:
+			best = ultimateBee
+			ite = 0
+		else:
+			ite+=1
+
+	return best
 
 if __name__ == '__main__':
 
@@ -445,19 +537,30 @@ if __name__ == '__main__':
 			if my_file.is_file():
 				print("Ya existe: " + direcc)
 				continue
-			f = open(direcc, 'w+')
+			#f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			f.write("\nRVNS\n")
+			#f.write("\nRVNS\n")
 			for i in range(0,10):
 				start_time = time.time()
-				#result = VNS(vecindades, firstBetter, instance)
-				#result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
-				#result = SVNS(vecindades, firstBetter, instance)
-				result = RVNS(vecindades, firstBetter, instance)
+				result = "ERROR"
+				if sys.argv[1] == "VNS":
+					result = VNS(vecindades, firstBetter, instance)
+				elif sys.argv[1] == "SA":
+					result = simulatedAnnealing(23,vecindades[1],g_alfa,instance)
+				elif sys.argv[1] == "SVNS":
+					result = SVNS(vecindades, firstBetter, instance)
+				elif sys.argv[1] == "RVNS":
+					result = RVNS(vecindades, firstBetter, instance)
+				elif sys.argv[1] == "BA":
+					result = bee(n=10, m=5, e=2, elite=2, other=3, instance=instance)
+				else:
+					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
+				result = [training.shape[0], training.shape[0] - sum(result.positions) , firstAcc, result.accuracy]
+				result = '\t'.join(str(x) for x in result)
 				print(str(result) + "\t" + str(total_time))
-				f.write(str(result) + "\t" + str(total_time) + "\n")
+				#f.write(str(result) + "\t" + str(total_time) + "\n")
 
 			print("Results: " + direcc+ "\n")
-			f.close()
+			#f.close()
