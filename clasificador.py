@@ -516,6 +516,69 @@ def bee(n, m, e, elite, other, instance):
 			ite+=1
 
 	return best
+# -------------------------------------- CHC ------------------------------- #
+def distance(s1, s2):
+	result = 0
+	for i in range(len(s1.positions)):
+		result += s1[i]*s2[i]
+	return result
+
+def findBestMatch(s1, poblac):
+	maxim = 0
+	result = s1
+	for p in poblac:
+		act = distance(s1,p)
+		if act>=maxim:
+			maxim  = act
+			result = p
+	return result
+
+def randomCrossover(s1,s2):
+	result = Solution(p=s1.positions.copy())
+	for i in range(len(s1))
+		numero = randint(0,1)
+		if numero == 1:
+			result.positions[i] = s1.positions[i]
+		else:
+			result.positions[i] = s2.positions[i]
+
+def convergence(poblacion, maxim):
+	for p in poblacion:
+		act = distance(s1,p)
+		if act>=maxim:
+			return False
+	return True
+
+def CHC(n, ite, conv):
+	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
+	clf = LinearSVC()				# Inicializar clasificador a utilizar.
+	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	aux = 0
+	best = None
+	while(aux < ite):
+		while(True):
+			poblacion = genRandSol(n):
+			for p in poblacion:
+				objectiveFunction(p, clf)				# Calcular la funcion objetivo de la solucion inicial.
+				oposite = findBestMatch(s1,poblacion)	# Encontrar el polo opuesto, porque atrae (?)
+				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
+				son 	 = randomCrossover(p, oposite)	
+				daughter = randomCrossover(p, oposite)
+				objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
+				objectiveFunction(daughter, clf)
+				poblacion.append(son)					# Agregar las nuevas soluciones.
+				poblacion.append(daughter)
+
+			# Mantener los n mejores individuos (Conservative Selection Strategy).
+			poblacion = sorted(poblacion, key= lambda x : x.fo)	
+			poblacion = poblacion[:n]
+			# Reinicio
+			if (convergence(poblacion, conv)):
+				break
+		aux += 1
+		if(best == None or best.fo<poblacion[0].fo):
+			best = poblacion[0]
+	return best
 
 if __name__ == '__main__':
 
@@ -554,6 +617,8 @@ if __name__ == '__main__':
 					result = RVNS(vecindades, firstBetter, instance)
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
+				elif 
+					result = CHC(n, ite, conv)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
