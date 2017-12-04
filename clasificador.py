@@ -520,7 +520,7 @@ def bee(n, m, e, elite, other, instance):
 def distance(s1, s2):
 	result = 0
 	for i in range(len(s1.positions)):
-		result += s1[i]*s2[i]
+		result += s1.positions[i]^s2.positions[i]
 	return result
 
 def findBestMatch(s1, poblac):
@@ -533,14 +533,15 @@ def findBestMatch(s1, poblac):
 			result = p
 	return result
 
-def randomCrossover(s1,s2):
+def randomCrossover(s1,s2): #tal vez pasa lo mismo que el genRandSol v.1
 	result = Solution(p=s1.positions.copy())
-	for i in range(len(s1))
+	for i in range(len(s1.positions)):
 		numero = randint(0,1)
 		if numero == 1:
 			result.positions[i] = s1.positions[i]
 		else:
 			result.positions[i] = s2.positions[i]
+	return result
 
 def convergence(poblacion, maxim):
 	for p in poblacion:
@@ -557,10 +558,10 @@ def CHC(n, ite, conv):
 	best = None
 	while(aux < ite):
 		while(True):
-			poblacion = genRandSol(n):
+			poblacion = genRandSol(n)
 			for p in poblacion:
 				objectiveFunction(p, clf)				# Calcular la funcion objetivo de la solucion inicial.
-				oposite = findBestMatch(s1,poblacion)	# Encontrar el polo opuesto, porque atrae (?)
+				oposite = findBestMatch(p,poblacion)	# Encontrar el polo opuesto, porque atrae (?)
 				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
 				son 	 = randomCrossover(p, oposite)	
 				daughter = randomCrossover(p, oposite)
@@ -571,7 +572,8 @@ def CHC(n, ite, conv):
 
 			# Mantener los n mejores individuos (Conservative Selection Strategy).
 			poblacion = sorted(poblacion, key= lambda x : x.fo)	
-			poblacion = poblacion[:n]
+			poblacion = poblacion[:n] # OJOJOJOJOJOJO esto puede agregar incesto, pues solo te estas quedando con las
+									  # n mejores en lugar de renovar la generacion
 			# Reinicio
 			if (convergence(poblacion, conv)):
 				break
@@ -617,8 +619,8 @@ if __name__ == '__main__':
 					result = RVNS(vecindades, firstBetter, instance)
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
-				elif 
-					result = CHC(n, ite, conv)
+				elif sys.argv[1] == "CHC":
+					result = CHC(n=10, ite=100, conv=10)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
