@@ -523,7 +523,29 @@ def distance(s1, s2):
 		result += s1.positions[i]^s2.positions[i]
 	return result
 
-def findBestMatch(s1, poblac):
+# PARA TODOS LOS MATCH SE ASUME QUE LA LISTA ESTA ORDENADA
+
+def randomMatch(s1,poblac):
+	return sample(poblac,1)[0]
+
+def bestFoMatch(s1,poblac):
+	result = poblac[0] #maximo
+	if result != s1:
+		return result
+	result = poblac[1]
+	return result
+
+def closestDMatch(s1,poblac):
+	maxim = -1
+	result = s1
+	for p in poblac:
+		act = distance(s1,p)
+		if act<=maxim or maxim==-1:
+			maxim  = act
+			result = p
+	return result
+
+def furthestDMatch(s1, poblac):
 	maxim = 0
 	result = s1
 	for p in poblac:
@@ -577,6 +599,15 @@ def UX(s1,s2):
 			child2.positions[i] = s1.positions[i]
 	return child1,child2
 
+def AX(s1,s2):
+	child1 = Solution(p=s1.positions.copy())
+	child2 = Solution(p=s1.positions.copy())
+	for i in range(len(s1.positions)):
+		child1.positions[i] = s1.positions[i] and s2.positions[i]
+		child2.positions[i] = s1.positions[i] and s2.positions[i]
+	return child1,child2
+
+
 def convergence(poblacion, maxim):
 	acc = np.array(poblacion[0].positions)
 	for i in range(1,len(poblacion)):
@@ -590,10 +621,19 @@ def convergence(poblacion, maxim):
 	distances = list(map(lambda s : distance(s,centroid),poblacion))
 	distances = list(map(lambda d : d/len(poblacion[0].positions), distances))
 	meanDist = sum(distances)/len(distances)*1.0
-
+	print(meanDist)
 	if meanDist < maxim:
 		return True
 	return False
+
+def mutate(s):
+	mutant = Solution(p=[])
+	mutant.positions = list(map(lambda b: 1 if b == 0 else 0, s.positions))
+	return mutant
+
+def evalPoblacion(pob,clf):
+	for p in pob:
+		objectiveFunction(p,clf)
 
 def CHC(n, ite, conv):
 	global training
@@ -606,24 +646,41 @@ def CHC(n, ite, conv):
 	firstAcc = s.accuracy
 	aux = 0
 	best = s
+	mutationRate = 0.03
 	while(aux < ite):
 		while(True):
 			poblacion = genRandSol(n)
-
+			evalPoblacion(poblacion,clf)
 			for i in range(len(poblacion)):
-				objectiveFunction(poblacion[i], clf)				# Calcular la funcion objetivo de la solucion inicial.
-				oposite = findBestMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
+				# Calcular la funcion objetivo de la solucion inicial.
+				oposite = furthestDMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
 				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
 
-				son, daughter = splitCrossover(poblacion[i], oposite)	
-				objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
-				objectiveFunction(daughter, clf)
-				poblacion.append(son)					# Agregar las nuevas soluciones.
-				poblacion.append(daughter)
+				son, daughter = AX(poblacion[i], oposite)	
+				"""
+				r = random()
+				if r < mutationRate:
+					son = mutate(son)
+				r = random()
+				if r < mutationRate:
+					daughter = mutate(son)
+				"""
+				try:
+					objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
+					poblacion.append(son)
+				except:
+					pass
+				try:
+					objectiveFunction(daughter, clf)
+					poblacion.append(daughter)
+				except:
+					pass
+
 
 			# Mantener los n mejores individuos (Conservative Selection Strategy).
 			poblacion = sorted(poblacion, key= lambda x : x.fo)	
-			poblacion = poblacion[:n] # OJOJOJOJOJOJO esto puede agregar incesto, pues solo te estas quedando con las
+			poblacion.reverse()
+			poblacion = poblacion[:n] # 	OJOJOJOJOJOJO esto puede agregar incesto, pues solo te estas quedando con las
 									  # n mejores en lugar de renovar la generacion
 			#print(sum(poblacion[0].positions))
 			# Reinicio
@@ -657,7 +714,7 @@ if __name__ == '__main__':
 			#f = open(direcc, 'w+')
 			print("Running: " + instance)
 			
-			#f.write("\nRVNS\n")
+			#f.write("\nBA\n")
 			for i in range(0,10):
 				start_time = time.time()
 				result = "ERROR"
@@ -670,9 +727,9 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "RVNS":
 					result = RVNS(vecindades, firstBetter, instance)
 				elif sys.argv[1] == "BA":
-					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
+					result = bee(n=7, m=5, e=2, elite=2, other=36, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=100, ite=10, conv=0.3)
+					result = CHC(n=50, ite=5, conv=0.1)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
