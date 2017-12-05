@@ -605,7 +605,7 @@ def CHC(n, ite, conv):
 	objectiveFunction(s, clf)
 	firstAcc = s.accuracy
 	aux = 0
-	best = None
+	best = s
 	while(aux < ite):
 		while(True):
 			poblacion = genRandSol(n)
@@ -672,7 +672,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=10, ite=50, conv=0.2)
+					result = CHC(n=100, ite=10, conv=0.3)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
