@@ -518,10 +518,11 @@ def bee(n, m, e, elite, other, instance):
 	return best
 # -------------------------------------- CHC ------------------------------- #
 def distance(s1, s2):
+	global training
 	result = 0
 	for i in range(len(s1.positions)):
 		result += s1.positions[i]^s2.positions[i]
-	return result
+	return result/training.shape[0]
 
 def findBestMatch(s1, poblac):
 	maxim = 0
@@ -630,7 +631,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=10, ite=5, conv=100)
+					result = CHC(n=10, ite=100, conv=0.3)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
