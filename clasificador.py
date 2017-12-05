@@ -544,11 +544,21 @@ def randomCrossover(s1,s2): #tal vez pasa lo mismo que el genRandSol v.1
 	return result
 
 def convergence(poblacion, maxim):
-	for p in poblacion:
-		act = distance(s1,p)
-		if act>=maxim:
-			return False
-	return True
+	acc = np.array(poblacion[0].positions)
+	for i in range(1,len(poblacion)):
+		acc += np.array(poblacion[i].positions)
+	acc /= len(poblacion).positions
+
+	mapper = np.vectorize(lambda x: int(x))
+	centerPos = mapper(acc).tolist() 
+	centroid = Solution(p=centerPos)
+	
+	distances = map(lambda s : distance(s,centroid),poblacion)
+	meanDist = sum(distances)/len(distances)*1.0
+
+	if meanDist < maxim:
+		return True
+	return False
 
 def CHC(n, ite, conv):
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
@@ -620,7 +630,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=10, ite=100, conv=10)
+					result = CHC(n=10, ite=5, conv=100)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
