@@ -544,17 +544,26 @@ def randomCrossover(s1,s2): #tal vez pasa lo mismo que el genRandSol v.1
 			result.positions[i] = s2.positions[i]
 	return result
 
+def splitCrossover(s1,s2,flip):
+	half = int(len(s1.positions)/2)
+	result = Solution(p=[])
+	if flip:
+		result.positions = s1.positions[:half] + s2.positions[half:]
+	else:
+		result.positions = s2.positions[:half] + s1.positions[half:]
+	return result
+
 def convergence(poblacion, maxim):
 	acc = np.array(poblacion[0].positions)
 	for i in range(1,len(poblacion)):
 		acc += np.array(poblacion[i].positions)
-	acc /= len(poblacion).positions
+	acc = acc/len(poblacion)
 
 	mapper = np.vectorize(lambda x: int(x))
 	centerPos = mapper(acc).tolist() 
 	centroid = Solution(p=centerPos)
 	
-	distances = map(lambda s : distance(s,centroid),poblacion)
+	distances = list(map(lambda s : distance(s,centroid),poblacion))
 	meanDist = sum(distances)/len(distances)*1.0
 
 	if meanDist < maxim:
@@ -562,20 +571,27 @@ def convergence(poblacion, maxim):
 	return False
 
 def CHC(n, ite, conv):
+	global training
+	global firstAcc
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
 	clf = LinearSVC()				# Inicializar clasificador a utilizar.
 	initTrainSet(clf, data)			# Inicializar conjunto de ENTRENAMIENTO y PRUEBAS.
+	s = Solution([0]*training.shape[0])
+	objectiveFunction(s, clf)
+	firstAcc = s.accuracy
 	aux = 0
 	best = None
 	while(aux < ite):
 		while(True):
 			poblacion = genRandSol(n)
-			for p in poblacion:
-				objectiveFunction(p, clf)				# Calcular la funcion objetivo de la solucion inicial.
-				oposite = findBestMatch(p,poblacion)	# Encontrar el polo opuesto, porque atrae (?)
+
+			for i in range(len(poblacion)):
+				objectiveFunction(poblacion[i], clf)				# Calcular la funcion objetivo de la solucion inicial.
+				oposite = findBestMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
 				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
-				son 	 = randomCrossover(p, oposite)	
-				daughter = randomCrossover(p, oposite)
+
+				son 	 = splitCrossover(poblacion[i], oposite,1)	
+				daughter = splitCrossover(poblacion[i], oposite,0)
 				objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
 				objectiveFunction(daughter, clf)
 				poblacion.append(son)					# Agregar las nuevas soluciones.
@@ -585,6 +601,7 @@ def CHC(n, ite, conv):
 			poblacion = sorted(poblacion, key= lambda x : x.fo)	
 			poblacion = poblacion[:n] # OJOJOJOJOJOJO esto puede agregar incesto, pues solo te estas quedando con las
 									  # n mejores en lugar de renovar la generacion
+			#print(sum(poblacion[0].positions))
 			# Reinicio
 			if (convergence(poblacion, conv)):
 				break
