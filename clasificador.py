@@ -518,11 +518,10 @@ def bee(n, m, e, elite, other, instance):
 	return best
 # -------------------------------------- CHC ------------------------------- #
 def distance(s1, s2):
-	global training
 	result = 0
 	for i in range(len(s1.positions)):
 		result += s1.positions[i]^s2.positions[i]
-	return result/training.shape[0]
+	return result
 
 def findBestMatch(s1, poblac):
 	maxim = 0
@@ -534,24 +533,49 @@ def findBestMatch(s1, poblac):
 			result = p
 	return result
 
-def randomCrossover(s1,s2): #tal vez pasa lo mismo que el genRandSol v.1
-	result = Solution(p=s1.positions.copy())
+def splitCrossover(s1,s2):
+	half = int(len(s1.positions)/2)
+	child1 = Solution(p=[])
+	child2 = Solution(p=[])
+	child1.positions = s1.positions[:half] + s2.positions[half:]
+	child2.positions = s2.positions[:half] + s1.positions[half:]
+	return child1,child2
+
+def HUX(s1,s2):
+	child1 = Solution(p=s1.positions.copy())
+	child2 = Solution(p=s1.positions.copy())
+	d = distance(s1,s2)
+	toChange = int(d/2)
+	result = 0
+	count=0
+	for i in range(len(s1.positions)):
+		if s1.positions[i]^s2.positions[i]:
+			r = randint(0,1)
+			if r:
+				child1.positions[i] = s1.positions[i]
+				child2.positions[i] = s2.positions[i]
+				count += 1
+			else:
+				child1.positions[i] = s1.positions[i]
+				child2.positions[i] = s2.positions[i]
+			if count == toChange:
+				break
+
+	return child1,child2
+
+
+def UX(s1,s2):
+	child1 = Solution(p=s1.positions.copy())
+	child2 = Solution(p=s1.positions.copy())
 	for i in range(len(s1.positions)):
 		numero = randint(0,1)
 		if numero == 1:
-			result.positions[i] = s1.positions[i]
+			child1.positions[i] = s1.positions[i]
+			child2.positions[i] = s2.positions[i]
 		else:
-			result.positions[i] = s2.positions[i]
-	return result
-
-def splitCrossover(s1,s2,flip):
-	half = int(len(s1.positions)/2)
-	result = Solution(p=[])
-	if flip:
-		result.positions = s1.positions[:half] + s2.positions[half:]
-	else:
-		result.positions = s2.positions[:half] + s1.positions[half:]
-	return result
+			child1.positions[i] = s2.positions[i]
+			child2.positions[i] = s1.positions[i]
+	return child1,child2
 
 def convergence(poblacion, maxim):
 	acc = np.array(poblacion[0].positions)
@@ -564,6 +588,7 @@ def convergence(poblacion, maxim):
 	centroid = Solution(p=centerPos)
 	
 	distances = list(map(lambda s : distance(s,centroid),poblacion))
+	distances = list(map(lambda d : d/len(poblacion[0].positions), distances))
 	meanDist = sum(distances)/len(distances)*1.0
 
 	if meanDist < maxim:
@@ -590,8 +615,7 @@ def CHC(n, ite, conv):
 				oposite = findBestMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
 				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
 
-				son 	 = splitCrossover(poblacion[i], oposite,1)	
-				daughter = splitCrossover(poblacion[i], oposite,0)
+				son, daughter = splitCrossover(poblacion[i], oposite)	
 				objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
 				objectiveFunction(daughter, clf)
 				poblacion.append(son)					# Agregar las nuevas soluciones.
@@ -648,7 +672,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=1, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=10, ite=100, conv=0.3)
+					result = CHC(n=10, ite=50, conv=0.2)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
