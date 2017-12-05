@@ -648,36 +648,42 @@ def CHC(n, ite, conv):
 	best = s
 	mutationRate = 0.03
 	while(aux < ite):
-		while(True):
+		noImprovement = 0
+		while(noImprovement < ite+5):
+			alfaMate = None
+			prole = set()
 			poblacion = genRandSol(n)
 			evalPoblacion(poblacion,clf)
 			for i in range(len(poblacion)):
 				# Calcular la funcion objetivo de la solucion inicial.
-				oposite = furthestDMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
+				oposite = bestFoMatch(poblacion[i],poblacion)	# Encontrar el polo opuesto, porque atrae (?)
 				# Calcular dos hijos para cada par de polos opuestos (Emely buscaba al menos dos).
 
-				son, daughter = AX(poblacion[i], oposite)	
-				"""
+				son, daughter = splitCrossover(poblacion[i], oposite)	
+				
 				r = random()
 				if r < mutationRate:
 					son = mutate(son)
 				r = random()
 				if r < mutationRate:
 					daughter = mutate(son)
-				"""
+				
 				try:
 					objectiveFunction(son, clf)				# Evaluar las nuevas soluciones.
-					poblacion.append(son)
+					prole.add(son)
+					#poblacion.append(son)
 				except:
 					pass
+
 				try:
 					objectiveFunction(daughter, clf)
-					poblacion.append(daughter)
+					prole.add(daughter)
+					#poblacion.append(daughter)
 				except:
 					pass
 
-
 			# Mantener los n mejores individuos (Conservative Selection Strategy).
+			poblacion = poblacion + list(prole)
 			poblacion = sorted(poblacion, key= lambda x : x.fo)	
 			poblacion.reverse()
 			poblacion = poblacion[:n] # 	OJOJOJOJOJOJO esto puede agregar incesto, pues solo te estas quedando con las
@@ -686,9 +692,18 @@ def CHC(n, ite, conv):
 			# Reinicio
 			if (convergence(poblacion, conv)):
 				break
+
+			if alfaMate==None or alfaMate.fo<poblacion[0]:
+				noImprovement = 0
+				alfaMate = poblacion[0]
+			else:
+				noImprovement+=1
+
+
 		aux += 1
 		if(best == None or best.fo<poblacion[0].fo):
 			best = poblacion[0]
+			break
 	return best
 
 if __name__ == '__main__':
@@ -697,7 +712,7 @@ if __name__ == '__main__':
 	# localSearch(firstBetter, sys.argv[1])
 	datasetFolder = "datasets/"
 	resultsFolder = "Results/"
-	sizeFolders = ["Small/", "Medium/", "Large/"]	# Tamanos de problemas
+	sizeFolders = ["Small/","Medium/","Large/"]	# Tamanos de problemas
 	mejoramientos = [firstBetter, percentageBetter]	# Tipos de mejoramiento (Busqueda Local)
 	vecindades=[neighbours1, k_neighbours, lambda s : k_neighbours(s, k=3), lambda s : k_neighbours(s, k=4)]						# Tipos de vecindades
 
@@ -729,7 +744,7 @@ if __name__ == '__main__':
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=36, instance=instance)
 				elif sys.argv[1] == "CHC":
-					result = CHC(n=50, ite=5, conv=0.1)
+					result = CHC(n=50, ite=5, conv=0.3)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
