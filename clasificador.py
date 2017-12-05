@@ -635,7 +635,7 @@ def evalPoblacion(pob,clf):
 	for p in pob:
 		objectiveFunction(p,clf)
 
-def CHC(n, ite, conv):
+def GA(n, ite, conv):
 	global training
 	global firstAcc
 	data = txtToMatrix(instance)	# Transformar archivo de texto a matriz
@@ -743,8 +743,8 @@ if __name__ == '__main__':
 					result = RVNS(vecindades, firstBetter, instance)
 				elif sys.argv[1] == "BA":
 					result = bee(n=7, m=5, e=2, elite=2, other=36, instance=instance)
-				elif sys.argv[1] == "CHC":
-					result = CHC(n=50, ite=5, conv=0.3)
+				elif sys.argv[1] == "GA":
+					result = GA(n=50, ite=5, conv=0.3)
 				else:
 					print(sys.argv[1]," Opcion invalida.")
 				total_time = time.time() - start_time
