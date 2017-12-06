@@ -6,7 +6,7 @@ if __name__ == '__main__':
 	# localSearch(firstBetter, sys.argv[1])
 	resultsFolder = "Results/"
 	sizeFolders = ["Small/", "Medium/", "Large/"] #Agregar Large cuando termine
-	metaHsfolders = ["VNS/","SVNS/","RVNS/","SA/"]
+	metaHsfolders = ["GA/","BA/"]#["VNS/","SVNS/","RVNS/","SA/"]
 	for meta in  metaHsfolders:
 		for fd in sizeFolders:
 			instanceResultFolder = resultsFolder + meta + fd
@@ -36,23 +36,22 @@ if __name__ == '__main__':
 						corrida = True
 						st.write(data[0] +"\n")
 						renglones = ["MediaIni","MediaIS+-stdev", "MAccIni+-stdev",
-									"MAccIS+-stdev", "Media Ite", "Tiempo Medio"]
+									"MAccIS+-stdev", "Tiempo Medio"]
 						string = '\t'.join(x for x in renglones)
 						st.write(string +"\n")
 						continue
-					elif len(data)==0:
+					elif len(data)==0:#RECORDAR ELIMINAR ITERACIONES DE LOS OTROS RESULTAOS
 						results_data = np.array(matrix,dtype = 'float64')
 						#print(results_data)
 						mediaIni = np.mean(results_data[:,0])
-						mediaIS = np.mean(results_data[:,1])
-						mediaISStDev = np.std(results_data[:,1],ddof = 1)
+						mediaIS = np.mean(results_data[:,1])/results_data[0,0]
+						mediaISStDev = np.std(results_data[:,1]/results_data[0,0],ddof = 1)
 						mAccIni = np.mean(results_data[:,2])
 						mAccIniStDev = np.std(results_data[:,2],ddof = 1) 
 						mAccIS = np.mean(results_data[:,3])
 						mAccISStDev = np.std(results_data[:,3], ddof = 1)
-						mIte = np.mean(results_data[:,4])
-						mTime = np.mean(results_data[:,5])
-						values = [mediaIni,mediaIS,mAccIni,mAccIS,mIte,mTime]
+						mTime = np.mean(results_data[:,4])
+						values = [mediaIni,mediaIS,mAccIni,mAccIS,mTime]
 						values = [x for x in map(str, values)]
 						values[1] = str(mediaIS)+"+-"+str(mediaISStDev)
 						values[2] = str(mAccIni)+"+-"+str(mAccIniStDev)
@@ -60,8 +59,7 @@ if __name__ == '__main__':
 						string = '\t'.join(x for x in values)
 						st.write(string+'\n')
 						matrix = []
-						corrida = False
-						continue
+						break
 					matrix.append(data)
 
 				f.close()
